@@ -48,28 +48,18 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   float phi = atan2(py, px);
   float rho_dot = (px * vx + py * vy) / rho;
 
-  // bounds and division by zero error checking
-  if (fabs(rho) < 0.00001) {
-      px += 0.001;
-      py += 0.001;
-      rho = sqrt(pow(px, 2) + pow(py, 2));
-  }
-  while (phi > 2 * M_PI) {
-      phi -= 2 * M_PI;
-  }
-  while (phi < -2 * M_PI) {
-      phi += 2 * M_PI;
-  }
+  VectorXd h(3);
+  // Use h function directly to map predicted locations
+  //from Cartesian to polar coordinates.
+  h << rho, phi, rho_dot; // h vector values
+  VectorXd y = z - h;
 
-  VectorXd z_pred = VectorXd(3, 1);
-  z_pred << rho,
-      phi,
-      rho_dot;
+  while (y(1) > M_PI) y(1) -= M_PI;
+  while (y(1) < -M_PI) y(1) += M_PI;
 
   MatrixXd Ht = H_.transpose();
   MatrixXd I = MatrixXd::Identity(x_.size(), x_.size());
 
-  VectorXd y = z - z_pred;
   MatrixXd S = H_ * P_ * Ht + R_;
   MatrixXd K = P_ * Ht * S.inverse();
 
